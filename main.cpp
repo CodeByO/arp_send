@@ -24,6 +24,7 @@
 #define HDR_SZ 6
 #define PRT_SZ 4
 #define BUFSIZE 8192
+
 struct arp_header
 {
    uint16_t ar_hrd;
@@ -38,15 +39,6 @@ struct arp_header
    uint32_t arp_tpa;
 };
 
-struct route_info
-{
-   struct in_addr dstAddr;
-   struct in_addr srcAddr;
-   struct in_addr gateWay;
-   char ifName[IF_NAMESIZE];
-
-};
-
 u_char Rframe[ETH_HDRLEN+ARP_HDRLEN];
 u_char frame[ETH_HDRLEN+ARP_HDRLEN];
 
@@ -54,29 +46,32 @@ struct arp_header *arpR = (struct arp_header *)(Rframe+14);
 struct arp_header *arpF = (struct arp_header *)(frame+14);
 
 pcap_t* handle;
-char addr[20];
 
 void Make_Header(void * data);
 void GetMacAddress(char *dev);
-char * GetIpAddress(char *dev);
+void GetIpAddress(char *dev);
 char *gateway;
 char *targetip;
 uint8_t mac_addr[6];
 char ip_addr[4];
+
 int main(int argc, char* argv[])
 {
    struct pcap_pkthdr* header;
-   
-   const u_char* packet;
+    const u_char* packet;
    char *dev = argv[1];
    char errbuf[PCAP_ERRBUF_SIZE];
-   GetMacAddress(dev);
-   GetIpAddress(dev);
-   targetip = argv[2];
-   gateway = argv[3];
+   GetMacAddress(dev); //get mac address
+   GetIpAddress(dev); // get ip address
+   targetip = argv[2]; // store target ip
+   gateway = argv[3]; //store gateway ip
+   
+   //test
    printf("ip address : %s\n",ip_addr);
    printf("target ip : %s\n",targetip); 
 
+
+   //make ARP Request Packet
    memcpy(Rframe,"\xFF\xFF\xFF\xFF\xFF\xFF",6); //input DEST mac
    memcpy(Rframe+6,mac_addr,6); //input SRC mac
    memcpy(Rframe+12, "\x08", 1);
@@ -89,6 +84,7 @@ int main(int argc, char* argv[])
    inet_pton(AF_INET,ip_addr,&arpR->arp_spa);
    inet_pton(AF_INET,targetip,&arpR->arp_tpa);   
    
+   //test
    printf("[DEBUG] ");
    for (int i=0; i<42; i++)
          printf("%02x ",Rframe[i]);
@@ -96,7 +92,7 @@ int main(int argc, char* argv[])
 
 
    handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
-   pcap_sendpacket(handle,Rframe,sizeof(Rframe));
+   pcap_sendpacket(handle,Rframe,sizeof(Rframe)); //send request packet
    if (handle == NULL)
    {
 	fprintf(stderr, "couldn't open device %s: %s\n",dev,errbuf);
@@ -118,6 +114,7 @@ void Make_Header(void * data)
   struct ether_header* ehPS = (struct ether_header *)data;
   struct arp_header* arpS = (struct arp_header *)(sizeof(struct ether_header)+data);
   
+  //Make ARP Reply Packet
   memcpy(frame,ehPS->ether_shost,6); //input DEST mac
   memcpy(frame+6,mac_addr,6); //input SRC mac
   memcpy(frame+12, "\x08", 1);
@@ -132,9 +129,10 @@ void Make_Header(void * data)
   memcpy(arpF->arp_tha,arpS->arp_sha,6);
   memcpy(arpF->arp_sha,(void *)mac_addr,6);
 
-  inet_pton(AF_INET,gateway,&arpF->arp_spa);
-  inet_pton(AF_INET,targetip,&arpF->arp_tpa);
+  inet_pton(AF_INET,gateway,&arpF->arp_spa); //set sender ip gateway
+  inet_pton(AF_INET,targetip,&arpF->arp_tpa); // set target ip
   
+  //test
   printf("[DEBUG] ");
   for (int i=0; i<42; i++)
         printf("%02x ",frame[i]);
