@@ -53,7 +53,7 @@ void GetIpAddress(char *dev);
 char *gateway;
 char *targetip;
 uint8_t mac_addr[6];
-char ip_addr[4];
+char ip_addr[20];
 
 int main(int argc, char* argv[])
 {
@@ -160,7 +160,7 @@ void GetMacAddress(char *dev)
    }
 }
 
-char * GetIpAddress(char *dev)
+void GetIpAddress(char *dev)
 {
    struct ifreq ifr;
    char ipstr[20];
@@ -175,6 +175,6 @@ char * GetIpAddress(char *dev)
    else
    {
 	inet_ntop(AF_INET, ifr.ifr_addr.sa_data+2, ipstr, sizeof(struct sockaddr));
-	memcpy(ip_addr,ipstr,4);
+	memcpy(ip_addr,ipstr,12);
    }
 }
